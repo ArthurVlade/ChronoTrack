@@ -21,7 +21,9 @@ import {
   Globe,
   Monitor,
   Check,
-  X
+  X,
+  UserPlus,
+  BookOpen
 } from 'lucide-react';
 import { Screenshot, WorkDiaryBlock, User } from '../types';
 import { buildWorkDiaryBlocks, calculatePayrollSummaries } from '../services/storage';
@@ -35,6 +37,8 @@ export const ManagerDashboard: React.FC = () => {
     settings,
     updateSettings,
     setIsExportModalOpen,
+    setIsInviteModalOpen,
+    setActiveView,
     activeView
   } = useApp();
 
@@ -91,58 +95,78 @@ export const ManagerDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Manager Sub-tabs (Apple Segmented Control) */}
-        <div className="flex items-center p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] self-start md:self-auto overflow-x-auto max-w-full">
-          <button
-            onClick={() => setDashboardSubTab('overview')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              dashboardSubTab === 'overview'
-                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
-            }`}
-          >
-            Live Team
-          </button>
-          <button
-            onClick={() => setDashboardSubTab('diary')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              dashboardSubTab === 'diary'
-                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
-            }`}
-          >
-            Work Diary & Screenshots
-          </button>
-          <button
-            onClick={() => setDashboardSubTab('reports')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              dashboardSubTab === 'reports'
-                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
-            }`}
-          >
-            Analytics & Reports
-          </button>
-          <button
-            onClick={() => setDashboardSubTab('payroll')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              dashboardSubTab === 'payroll'
-                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
-            }`}
-          >
-            Payroll (${totalAccruedPayroll.toFixed(0)})
-          </button>
-          <button
-            onClick={() => setDashboardSubTab('settings')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              dashboardSubTab === 'settings'
-                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
-            }`}
-          >
-            Tracking Policies
-          </button>
+        {/* Manager Sub-tabs & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+          <div className="flex items-center p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto max-w-full">
+            <button
+              onClick={() => setDashboardSubTab('overview')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                dashboardSubTab === 'overview'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              Live Team
+            </button>
+            <button
+              onClick={() => setDashboardSubTab('diary')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                dashboardSubTab === 'diary'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              Work Diary & Screenshots
+            </button>
+            <button
+              onClick={() => setDashboardSubTab('reports')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                dashboardSubTab === 'reports'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              Analytics & Reports
+            </button>
+            <button
+              onClick={() => setDashboardSubTab('payroll')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                dashboardSubTab === 'payroll'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              Payroll (${totalAccruedPayroll.toFixed(0)})
+            </button>
+            <button
+              onClick={() => setDashboardSubTab('settings')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                dashboardSubTab === 'settings'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              Tracking Policies
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsInviteModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Invite Member</span>
+            </button>
+            <button
+              onClick={() => setActiveView('docs')}
+              className="px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5 transition-all border border-black/[0.04] dark:border-white/[0.06]"
+              title="View Owner Setup and Onboarding Documentation"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#0071E3]" />
+              <span>Setup Guide</span>
+            </button>
+          </div>
         </div>
       </div>
 

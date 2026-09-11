@@ -17,7 +17,11 @@ import {
   Lock,
   Plus,
   Maximize2,
-  X
+  X,
+  Monitor,
+  Download,
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
 import { Screenshot } from '../types';
 
@@ -41,7 +45,13 @@ export const EmployeeTracker: React.FC = () => {
     settings,
     timeEntries,
     setIsManualModalOpen,
-    networkStatus
+    networkStatus,
+    screenCaptureMode,
+    realScreenStream,
+    enableLiveScreenCapture,
+    disableLiveScreenCapture,
+    setIsDesktopModalOpen,
+    setActiveView
   } = useApp();
 
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -335,6 +345,61 @@ export const EmployeeTracker: React.FC = () => {
             <div className="flex items-center justify-between text-[10px] text-[#86868B] dark:text-[#8E8E93]">
               <span>Frequency: <strong className="text-[#1D1D1F] dark:text-white">{settings.screenshotsPer10Min} screenshots</strong> / 10 mins</span>
               <span>10m Block Progress: {Math.round(tenMinProgress)}%</span>
+            </div>
+
+            {/* Screen Capture Mode & Full-Screen Controls */}
+            <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex flex-col gap-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <Monitor className="w-3.5 h-3.5 text-[#0071E3]" />
+                  <span className="text-[#86868B] dark:text-[#8E8E93]">Capture Mode:</span>
+                  <span className={`font-semibold px-2 py-0.5 rounded-md text-[10px] ${
+                    screenCaptureMode === 'live_screen'
+                      ? 'bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/20'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868B] dark:text-[#8E8E93]'
+                  }`}>
+                    {screenCaptureMode === 'live_screen' ? '● Entire Screen Live' : 'Simulated Test Mode'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setActiveView('docs')}
+                  className="text-[10px] text-[#0071E3] hover:underline flex items-center gap-1"
+                >
+                  <HelpCircle className="w-3 h-3" />
+                  <span>Screen Tutorial</span>
+                </button>
+              </div>
+
+              {/* Action Buttons: Live Stream vs Desktop .EXE */}
+              <div className="grid grid-cols-2 gap-2">
+                {screenCaptureMode === 'live_screen' ? (
+                  <button
+                    onClick={disableLiveScreenCapture}
+                    className="py-1.5 px-2 rounded-lg bg-[#FF3B30]/10 hover:bg-[#FF3B30]/20 text-[#FF3B30] text-[11px] font-medium transition-all"
+                  >
+                    Disconnect Screen Stream
+                  </button>
+                ) : (
+                  <button
+                    onClick={enableLiveScreenCapture}
+                    className="py-1.5 px-2 rounded-lg bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-[#0071E3] text-[11px] font-medium flex items-center justify-center gap-1 transition-all"
+                    title="Prompts browser to share Entire Screen"
+                  >
+                    <Monitor className="w-3 h-3" />
+                    <span>Share Entire Screen</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsDesktopModalOpen(true)}
+                  className="py-1.5 px-2 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-[#1D1D1F] dark:text-white text-[11px] font-medium flex items-center justify-center gap-1 transition-all"
+                  title="Download native background desktop installer"
+                >
+                  <Download className="w-3 h-3 text-[#AF52DE]" />
+                  <span>Desktop .EXE</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -111,3 +111,17 @@ export interface NotificationItem {
 }
 
 export type NetworkStatus = 'online' | 'offline' | 'syncing';
+
+export type ScreenCaptureMode = 'live_screen' | 'simulated';
+
+export type AppView = 'tracker' | 'dashboard' | 'reports' | 'payroll' | 'settings' | 'docs';
+
+export interface EmployeeInvite {
+  email: string;
+  name: string;
+  role: 'employee' | 'owner';
+  hourlyRate: number;
+  projectId: string;
+  inviteLink: string;
+  createdAt: string;
+}

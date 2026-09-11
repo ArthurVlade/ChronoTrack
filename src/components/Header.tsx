@@ -17,7 +17,10 @@ import {
   Download,
   UserCheck,
   ChevronDown,
-  Lock
+  Lock,
+  BookOpen,
+  UserPlus,
+  Monitor
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -36,7 +39,9 @@ export const Header: React.FC = () => {
     notifications,
     setIsManualModalOpen,
     setIsExportModalOpen,
-    setIsAuthModalOpen
+    setIsAuthModalOpen,
+    setIsInviteModalOpen,
+    setIsDesktopModalOpen
   } = useApp();
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -158,11 +163,47 @@ export const Header: React.FC = () => {
               <Settings className="w-3.5 h-3.5" />
               Settings
             </button>
+
+            <button
+              id="nav-docs"
+              onClick={() => setActiveView('docs')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeView === 'docs'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#0071E3]" />
+              Guides & Docs
+            </button>
           </nav>
         </div>
 
         {/* Right: Quick Actions, Network Simulator, Security Badge, Notifications, Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Owner: Invite Employee shortcut */}
+          {currentUser.role === 'owner' && (
+            <button
+              id="btn-header-invite"
+              onClick={() => setIsInviteModalOpen(true)}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-xs font-medium text-[#0071E3] transition-all"
+              title="Invite new remote team member"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Invite</span>
+            </button>
+          )}
+
+          {/* Desktop Agent download shortcut */}
+          <button
+            id="btn-header-desktop"
+            onClick={() => setIsDesktopModalOpen(true)}
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
+            title="Download ChronoTrack Desktop Agent (.exe / .dmg)"
+          >
+            <Monitor className="w-3.5 h-3.5 text-[#AF52DE]" />
+            <span>Agent (.exe)</span>
+          </button>
           
           {/* Add Manual Time shortcut */}
           <button

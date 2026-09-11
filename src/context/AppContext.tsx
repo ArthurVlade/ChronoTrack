@@ -6,7 +6,9 @@ import {
   TrackingSettings,
   NotificationItem,
   NetworkStatus,
-  Screenshot
+  Screenshot,
+  ScreenCaptureMode,
+  AppView
 } from '../types';
 import {
   loadUsers,
@@ -23,7 +25,11 @@ import {
   addToOfflineQueue,
   clearOfflineQueue
 } from '../services/storage';
-import { captureScreenOrSimulate } from '../services/screenCapture';
+import {
+  captureScreenOrSimulate,
+  requestEntireScreenStream,
+  downloadDesktopAgentPackage
+} from '../services/screenCapture';
 import { encryptData } from '../services/crypto';
 
 interface AppContextType {
@@ -46,6 +52,8 @@ interface AppContextType {
   keystrokesCount: number;
   mouseClicksCount: number;
   currentBlockScreenshots: Screenshot[];
+  screenCaptureMode: ScreenCaptureMode;
+  realScreenStream: MediaStream | null;
   
   // Actions
   toggleDarkMode: () => void;
@@ -56,6 +64,17 @@ interface AppContextType {
   startTracking: () => void;
   stopTracking: () => Promise<void>;
   takeManualScreenshotNow: () => Promise<void>;
+  enableLiveScreenCapture: () => Promise<boolean>;
+  disableLiveScreenCapture: () => void;
+  setScreenCaptureMode: (mode: ScreenCaptureMode) => void;
+  downloadDesktopAgent: (platform?: 'win' | 'mac' | 'linux') => void;
+  inviteEmployee: (data: {
+    name: string;
+    email: string;
+    role: 'employee' | 'owner';
+    hourlyRate: number;
+    projectId: string;
+  }) => Promise<User>;
   addManualTimeEntry: (params: {
     projectId: string;
     date: string;
@@ -77,8 +96,12 @@ interface AppContextType {
   setIsExportModalOpen: (open: boolean) => void;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  activeView: 'tracker' | 'dashboard' | 'reports' | 'payroll' | 'settings';
-  setActiveView: (view: 'tracker' | 'dashboard' | 'reports' | 'payroll' | 'settings') => void;
+  isInviteModalOpen: boolean;
+  setIsInviteModalOpen: (open: boolean) => void;
+  isDesktopModalOpen: boolean;
+  setIsDesktopModalOpen: (open: boolean) => void;
+  activeView: AppView;
+  setActiveView: (view: AppView) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -103,13 +126,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [keystrokesCount, setKeystrokesCount] = useState<number>(0);
   const [mouseClicksCount, setMouseClicksCount] = useState<number>(0);
   const [currentBlockScreenshots, setCurrentBlockScreenshots] = useState<Screenshot[]>([]);
+  const [screenCaptureMode, setScreenCaptureMode] = useState<ScreenCaptureMode>('simulated');
+  const [realScreenStream, setRealScreenStream] = useState<MediaStream | null>(null);
   const trackingStartTimeRef = useRef<number | null>(null);
 
   // Modals & Navigation
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'tracker' | 'dashboard' | 'reports' | 'payroll' | 'settings'>(
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
+  const [activeView, setActiveView] = useState<AppView>(
     currentUser.role === 'owner' ? 'dashboard' : 'tracker'
   );
 
@@ -198,7 +225,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const screenshotTimer = setInterval(async () => {
       try {
-        const capture = await captureScreenOrSimulate(trackingMemo);
+        const capture = await captureScreenOrSimulate(trackingMemo, realScreenStream);
         const newShot: Screenshot = {
           id: `shot-${Date.now()}`,
           timestamp: new Date().toISOString(),
@@ -228,7 +255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, intervalSec * 1000);
 
     return () => clearInterval(screenshotTimer);
-  }, [isTracking, settings.screenshotsPer10Min, settings.blurScreenshotsByDefault, settings.pushNotificationsEnabled, trackingMemo]);
+  }, [isTracking, settings.screenshotsPer10Min, settings.blurScreenshotsByDefault, settings.pushNotificationsEnabled, trackingMemo, realScreenStream]);
 
   const addNotificationInternal = useCallback((item: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => {
     const newNotif: NotificationItem = {
@@ -248,6 +275,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNotificationInternal(item);
   }, [addNotificationInternal]);
 
+  // Enable Live Screen Capture (Entire Screen)
+  const enableLiveScreenCapture = useCallback(async (): Promise<boolean> => {
+    try {
+      const stream = await requestEntireScreenStream();
+      setRealScreenStream(stream);
+      setScreenCaptureMode('live_screen');
+
+      // Listen for user terminating stream externally via browser UI
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          setRealScreenStream(null);
+          setScreenCaptureMode('simulated');
+          addNotificationInternal({
+            title: 'Live Screen Share Ended',
+            message: 'Browser screen sharing track ended. Reverted to simulated testing mode.',
+            type: 'sync'
+          });
+        };
+      }
+
+      addNotificationInternal({
+        title: 'Entire Screen Audit Active',
+        message: 'Live desktop display stream successfully connected for automated screenshots.',
+        type: 'sync',
+        priority: 'urgent'
+      });
+      return true;
+    } catch (err) {
+      console.warn('Unable to acquire screen stream:', err);
+      addNotificationInternal({
+        title: 'Screen Permission Notice',
+        message: 'Screen capture permission was not granted or blocked by iframe sandbox. You can download the desktop .exe agent for background audits.',
+        type: 'sync'
+      });
+      return false;
+    }
+  }, [addNotificationInternal]);
+
+  // Disable Live Screen Capture
+  const disableLiveScreenCapture = useCallback(() => {
+    if (realScreenStream) {
+      realScreenStream.getTracks().forEach(t => t.stop());
+      setRealScreenStream(null);
+    }
+    setScreenCaptureMode('simulated');
+  }, [realScreenStream]);
+
+  // Download Desktop Agent Companion
+  const downloadDesktopAgent = useCallback((platform: 'win' | 'mac' | 'linux' = 'win') => {
+    downloadDesktopAgentPackage(platform);
+    addNotificationInternal({
+      title: 'Desktop Agent Downloaded',
+      message: `ChronoTrack companion installer package downloaded for ${platform.toUpperCase()}. Run to enable silent background full-screen auditing.`,
+      type: 'sync'
+    });
+  }, [addNotificationInternal]);
+
+  // Invite remote employee
+  const inviteEmployee = useCallback(async (data: {
+    name: string;
+    email: string;
+    role: 'employee' | 'owner';
+    hourlyRate: number;
+    projectId: string;
+  }): Promise<User> => {
+    const newId = `user-${Date.now()}`;
+    const newUser: User = {
+      id: newId,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      designation: data.role === 'owner' ? 'Project Manager' : 'Remote Team Member',
+      hourlyRate: data.hourlyRate,
+      isOnline: false,
+      activeProject: data.projectId,
+      trackingSince: null
+    };
+
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      saveUsers(updated);
+      return updated;
+    });
+
+    addNotificationInternal({
+      title: 'Team Member Invited',
+      message: `${data.name} (${data.email}) added to workspace at $${data.hourlyRate}/hr.`,
+      type: 'security',
+      priority: 'urgent'
+    });
+
+    return newUser;
+  }, [addNotificationInternal]);
+
   // Start Tracking
   const startTracking = useCallback(async () => {
     setIsTracking(true);
@@ -258,7 +381,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Take initial screenshot on tracker start
     try {
-      const capture = await captureScreenOrSimulate(trackingMemo);
+      const capture = await captureScreenOrSimulate(trackingMemo, realScreenStream);
       const initialShot: Screenshot = {
         id: `shot-init-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -377,7 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Take an instant screenshot now
   const takeManualScreenshotNow = useCallback(async () => {
     try {
-      const capture = await captureScreenOrSimulate(trackingMemo, false);
+      const capture = await captureScreenOrSimulate(trackingMemo, realScreenStream);
       const newShot: Screenshot = {
         id: `shot-instant-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -399,7 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.error('Instant screenshot error', err);
     }
-  }, [trackingMemo, settings.blurScreenshotsByDefault, addNotificationInternal]);
+  }, [trackingMemo, realScreenStream, settings.blurScreenshotsByDefault, addNotificationInternal]);
 
   // Add Manual Time Entry
   const addManualTimeEntry = useCallback(async (params: {
@@ -576,6 +699,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         keystrokesCount,
         mouseClicksCount,
         currentBlockScreenshots,
+        screenCaptureMode,
+        realScreenStream,
         toggleDarkMode,
         setNetworkStatus,
         switchUser,
@@ -584,6 +709,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startTracking,
         stopTracking,
         takeManualScreenshotNow,
+        enableLiveScreenCapture,
+        disableLiveScreenCapture,
+        setScreenCaptureMode,
+        downloadDesktopAgent,
+        inviteEmployee,
         addManualTimeEntry,
         updateSettings,
         syncOfflineData,
@@ -596,6 +726,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsExportModalOpen,
         isAuthModalOpen,
         setIsAuthModalOpen,
+        isInviteModalOpen,
+        setIsInviteModalOpen,
+        isDesktopModalOpen,
+        setIsDesktopModalOpen,
         activeView,
         setActiveView
       }}

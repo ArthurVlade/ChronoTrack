@@ -3,9 +3,12 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { EmployeeTracker } from './components/EmployeeTracker';
 import { ManagerDashboard } from './components/ManagerDashboard';
+import { DocsAndTutorialView } from './components/DocsAndTutorialView';
 import { ManualTimeModal } from './components/ManualTimeModal';
 import { ExportModal } from './components/ExportModal';
 import { AuthModal } from './components/AuthModal';
+import { InviteEmployeeModal } from './components/InviteEmployeeModal';
+import { DesktopAgentModal } from './components/DesktopAgentModal';
 import { PrintableReport } from './components/PrintableReport';
 
 const MainContent: React.FC = () => {
@@ -17,7 +20,9 @@ const MainContent: React.FC = () => {
         <Header />
         
         <main className="flex-1 pb-16">
-          {activeView === 'tracker' ? (
+          {activeView === 'docs' ? (
+            <DocsAndTutorialView />
+          ) : activeView === 'tracker' ? (
             <EmployeeTracker />
           ) : (
             <ManagerDashboard />
@@ -29,6 +34,8 @@ const MainContent: React.FC = () => {
       <ManualTimeModal />
       <ExportModal />
       <AuthModal />
+      <InviteEmployeeModal />
+      <DesktopAgentModal />
       
       {/* Hidden container formatted for clean vector PDF printing */}
       <PrintableReport />
