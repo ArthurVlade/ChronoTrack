@@ -5,54 +5,6 @@
 
 ---
 
-## 📸 System Architecture & Dashboard Panels
-
-### 1. Manager Overview & Live Team Dashboard
-```
-+-------------------------------------------------------------------------------------------------------------+
-|  [⚡ ChronoTrack Enterprise]   [Team Live]  [Work Diary & Audit]  [Payroll]  [Settings]  [Guides & Docs]    |
-+-------------------------------------------------------------------------------------------------------------+
-|  TOTAL LOGGED: 42.8 hrs   |   ACTIVE NOW: 3 online   |   ACCRUED PAYROLL: $2,845.00   |   ENCRYPTION: AES-256|
-+-------------------------------------------------------------------------------------------------------------+
-|  LIVE TEAM ACTIVITY:                                                                                        |
-|  • Alex Rivera      | Project: Mobile App | Status: 85% Active | [████████░░] | Last Shot: 2 mins ago     |
-|  • Elena Rostova    | Project: Web UI     | Status: 92% Active | [█████████░] | Last Shot: 4 mins ago     |
-|  • Marcus Chen      | Project: Backend    | Status: 74% Active | [███████░░░] | Last Shot: 7 mins ago     |
-+-------------------------------------------------------------------------------------------------------------+
-```
-
-### 2. 10-Minute Screenshot Work Diary Matrix (Upwork Standard)
-```
-+-------------------------------------------------------------------------------------------------------------+
-|  Work Diary for Alex Rivera  |  Date: 2026-09-11  |  Total: 6 hrs 40 mins  |  Activity Avg: 84%             |
-+-------------------------------------------------------------------------------------------------------------+
-|  09:00 AM  [ 📷 88% ] [ 📷 92% ] [ 📷 79% ] [ 📷 85% ] [ 📷 90% ] [ 📷 84% ]  -> 1 hr 00m (6 blocks)       |
-|  10:00 AM  [ 📷 95% ] [ 📷 87% ] [ 📷 91% ] [ 📷 73% ] [ 📷 82% ] [ 📷 88% ]  -> 1 hr 00m (6 blocks)       |
-|  11:00 AM  [ 📷 64% ] [ 📷 80% ] [ 📷 85% ] [ 📝 MANUAL TIME: Client Call ]  -> 1 hr 00m (Verified)      |
-+-------------------------------------------------------------------------------------------------------------+
-|  * Each 10-minute block records a random full-screen screenshot, active window title, and keystrokes/clicks.|
-|  * Owners can click any block to inspect full resolution or discard non-work intervals from billable totals.|
-+-------------------------------------------------------------------------------------------------------------+
-```
-
-### 3. Employee Tracking Interface (Web & Native Desktop)
-```
-+-------------------------------------------------------------------------------------------------------------+
-|  PROJECT: Apollo Cloud Platform (Acme Corp)                                       [ + Manual Time ]         |
-|  TASK MEMO: Refactoring authentication flows and high-contrast Apple UI tokens                              |
-|                                                                                                             |
-|  [ ▶ START TRACKING ]   02:45:18 Elapsed   |   Current Rate: $65.00/hr   |   Today's Earned: $178.75         |
-|                                                                                                             |
-|  ACTIVITY SENSOR:                                      AUTOMATED SCREENSHOT (Interval: 3 shots/10m):        |
-|  [████████░░] 85% Active                               +-------------------------------------------------+  |
-|  Keystrokes: 428   |   Mouse Clicks: 112               | [Preview: VS Code - authController.ts]          |  |
-|                                                        | Mode: ● Entire Screen Live (Full Desktop)       |  |
-|                                                        | [ Share Entire Screen ]  [ Download Agent .EXE ]|  |
-+-------------------------------------------------------------------------------------------------------------+
-```
-
----
-
 ## 🎯 Dual Architecture: Web Dashboard vs Desktop Companion
 
 Modern browsers enforce strict sandbox constraints: when an employee minimizes or switches browser tabs, the browser may throttle background JavaScript execution or stop WebRTC screen streams.
