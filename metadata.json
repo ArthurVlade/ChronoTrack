@@ -1,0 +1,6 @@
+{
+  "name": "Time & Activity Tracker",
+  "description": "Apple-inspired remote team time tracker with activity monitoring, automated screenshots, manual entries, weekly performance reports, payroll integration, and offline sync.",
+  "requestFramePermissions": ["display-capture"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
