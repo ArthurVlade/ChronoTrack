@@ -23,7 +23,8 @@ import {
   Check,
   X,
   UserPlus,
-  BookOpen
+  BookOpen,
+  UserCog
 } from 'lucide-react';
 import { Screenshot, WorkDiaryBlock, User } from '../types';
 import { buildWorkDiaryBlocks, calculatePayrollSummaries } from '../services/storage';
@@ -38,6 +39,8 @@ export const ManagerDashboard: React.FC = () => {
     updateSettings,
     setIsExportModalOpen,
     setIsInviteModalOpen,
+    setIsEditProfileModalOpen,
+    setProfileModalTargetUser,
     setActiveView,
     activeView
   } = useApp();
@@ -316,17 +319,32 @@ export const ManagerDashboard: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
-                    <button
-                      onClick={() => {
-                        setSelectedUserId(member.id);
-                        setDashboardSubTab('diary');
-                      }}
-                      className="text-xs font-semibold text-[#0071E3] hover:underline"
-                    >
-                      Audit Screenshots &rarr;
-                    </button>
-                    <span className="text-[11px] text-[#86868B] font-mono">
+                  <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setSelectedUserId(member.id);
+                          setDashboardSubTab('diary');
+                        }}
+                        className="text-xs font-semibold text-[#0071E3] hover:underline"
+                      >
+                        Audit Screenshots &rarr;
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileModalTargetUser(member);
+                          setIsEditProfileModalOpen(true);
+                        }}
+                        className="flex items-center gap-1 text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white transition-colors cursor-pointer"
+                        title="Edit employee name, email, avatar, hourly rate, and assignment"
+                      >
+                        <UserCog className="w-3.5 h-3.5 text-[#0071E3]" />
+                        <span>Edit Details</span>
+                      </button>
+                    </div>
+
+                    <span className="text-[11px] text-[#86868B] font-mono whitespace-nowrap">
                       ${((daySecs / 3600) * member.hourlyRate).toFixed(2)} earned
                     </span>
                   </div>
@@ -694,12 +712,27 @@ export const ManagerDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => alert(`Payroll payout of $${p.totalEarnings.toFixed(2)} processed for ${p.userName} via integrated gateway.`)}
-                          className="px-3 py-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-xs font-semibold text-[#1D1D1F] dark:text-white transition-all"
-                        >
-                          Disburse
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              const targetMember = users.find(u => u.id === p.userId);
+                              if (targetMember) {
+                                setProfileModalTargetUser(targetMember);
+                                setIsEditProfileModalOpen(true);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-[#86868B] hover:text-[#0071E3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+                            title="Edit Rate, Name & Details"
+                          >
+                            <UserCog className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => alert(`Payroll payout of $${p.totalEarnings.toFixed(2)} processed for ${p.userName} via integrated gateway.`)}
+                            className="px-3 py-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-xs font-semibold text-[#1D1D1F] dark:text-white transition-all cursor-pointer"
+                          >
+                            Disburse
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

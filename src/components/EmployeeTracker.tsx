@@ -21,7 +21,8 @@ import {
   Monitor,
   Download,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  UserCog
 } from 'lucide-react';
 import { Screenshot } from '../types';
 
@@ -51,6 +52,8 @@ export const EmployeeTracker: React.FC = () => {
     enableLiveScreenCapture,
     disableLiveScreenCapture,
     setIsDesktopModalOpen,
+    setIsEditProfileModalOpen,
+    setProfileModalTargetUser,
     setActiveView
   } = useApp();
 
@@ -86,23 +89,50 @@ export const EmployeeTracker: React.FC = () => {
       
       {/* Top Banner / Welcome with Apple Minimalist Style */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-black/[0.06] dark:border-white/[0.08]">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-white">
-            Time Tracker
-          </h1>
-          <p className="text-xs sm:text-sm text-[#86868B] dark:text-[#8E8E93] mt-0.5">
-            Logged in as <span className="font-semibold text-[#1D1D1F] dark:text-white">{currentUser.name}</span> • ${currentUser.hourlyRate}/hr
-          </p>
+        <div className="flex items-center gap-3">
+          <img
+            src={currentUser.avatar}
+            alt={currentUser.name}
+            className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/10"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-white">
+                Time Tracker
+              </h1>
+              <button
+                onClick={() => {
+                  setProfileModalTargetUser(currentUser);
+                  setIsEditProfileModalOpen(true);
+                }}
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[#0071E3] transition-all cursor-pointer"
+                title="Change your name, photo, email, or password"
+              >
+                <UserCog className="w-3 h-3" />
+                <span>Edit Profile</span>
+              </button>
+            </div>
+            <p className="text-xs sm:text-sm text-[#86868B] dark:text-[#8E8E93] mt-0.5">
+              Logged in as <span className="font-semibold text-[#1D1D1F] dark:text-white">{currentUser.name}</span> • ${currentUser.hourlyRate}/hr • {currentUser.designation}
+            </p>
+          </div>
         </div>
 
         {/* Network & Encryption status badge */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           {networkStatus === 'offline' && (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#FF9500]/15 text-[#FF9500] border border-[#FF9500]/30">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>Offline Mode Active • Auto-Sync on reconnect</span>
             </div>
           )}
+          <button
+            onClick={() => setIsDesktopModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#0071E3]/10 text-[#0071E3] hover:bg-[#0071E3]/15 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Desktop .exe</span>
+          </button>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-black/[0.04] dark:bg-white/[0.06] text-[#86868B] dark:text-[#8E8E93]">
             <Lock className="w-3.5 h-3.5 text-[#34C759]" />
             <span>End-to-End Encrypted</span>

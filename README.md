@@ -114,8 +114,8 @@ For guaranteed compliance, direct your employees to download the **ChronoTrack D
 ### Installation
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/chronotrack-enterprise.git
-cd chronotrack-enterprise
+git clone https://github.com/ArthurVlade/ChronoTrack.git
+cd ChronoTrack
 
 # 2. Install dependencies
 npm install

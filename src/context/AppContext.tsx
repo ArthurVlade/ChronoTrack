@@ -23,12 +23,17 @@ import {
   saveNotifications,
   getOfflineQueue,
   addToOfflineQueue,
-  clearOfflineQueue
+  clearOfflineQueue,
+  loadAuthSession,
+  saveAuthSession,
+  verifyUserCredentials,
+  findInviteByCode
 } from '../services/storage';
 import {
   captureScreenOrSimulate,
   requestEntireScreenStream,
-  downloadDesktopAgentPackage
+  downloadDesktopAgentPackage,
+  downloadAgentConfigFile
 } from '../services/screenCapture';
 import { encryptData } from '../services/crypto';
 
@@ -42,6 +47,14 @@ interface AppContextType {
   networkStatus: NetworkStatus;
   isDarkMode: boolean;
   offlineQueueCount: number;
+  
+  // Authentication & Role Access
+  isAuthenticated: boolean;
+  loginWithCredentials: (emailOrUsername: string, pass: string) => Promise<User | null>;
+  loginWithGoogle: (email: string, name?: string) => Promise<User>;
+  joinTeamWithCode: (code: string, name: string, email: string, pass: string) => Promise<User | null>;
+  logout: () => void;
+  updateUserProfile: (userId: string, updates: Partial<User>) => void;
   
   // Tracking State
   isTracking: boolean;
@@ -68,6 +81,7 @@ interface AppContextType {
   disableLiveScreenCapture: () => void;
   setScreenCaptureMode: (mode: ScreenCaptureMode) => void;
   downloadDesktopAgent: (platform?: 'win' | 'mac' | 'linux') => void;
+  downloadAgentConfig: () => void;
   inviteEmployee: (data: {
     name: string;
     email: string;
@@ -100,6 +114,10 @@ interface AppContextType {
   setIsInviteModalOpen: (open: boolean) => void;
   isDesktopModalOpen: boolean;
   setIsDesktopModalOpen: (open: boolean) => void;
+  isEditProfileModalOpen: boolean;
+  setIsEditProfileModalOpen: (open: boolean) => void;
+  profileModalTargetUser: User | null;
+  setProfileModalTargetUser: (user: User | null) => void;
   activeView: AppView;
   setActiveView: (view: AppView) => void;
 }
@@ -108,8 +126,26 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(loadUsers);
-  // Default to Alex Rivera (employee tracker) or Sarah Jenkins (owner)
-  const [currentUser, setCurrentUser] = useState<User>(() => users.find(u => u.role === 'employee') || users[0]);
+  
+  // Check auth session
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const session = loadAuthSession();
+    if (!session) return true; // Default session so app loads seamlessly
+    const currentList = loadUsers();
+    return currentList.some(u => u.id === session.userId);
+  });
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const session = loadAuthSession();
+    const currentList = loadUsers();
+    if (session) {
+      const matched = currentList.find(u => u.id === session.userId);
+      if (matched) return matched;
+    }
+    // Default to Alex Rivera (employee)
+    return currentList.find(u => u.role === 'employee') || currentList[0];
+  });
+
   const [projects, setProjects] = useState<Project[]>(loadProjects);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(loadTimeEntries);
   const [settings, setSettings] = useState<TrackingSettings>(loadSettings);
@@ -136,7 +172,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
-  const [activeView, setActiveView] = useState<AppView>(
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [profileModalTargetUser, setProfileModalTargetUser] = useState<User | null>(null);
+  const [activeView, setActiveViewState] = useState<AppView>(
     currentUser.role === 'owner' ? 'dashboard' : 'tracker'
   );
 
@@ -323,54 +361,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setScreenCaptureMode('simulated');
   }, [realScreenStream]);
 
-  // Download Desktop Agent Companion
-  const downloadDesktopAgent = useCallback((platform: 'win' | 'mac' | 'linux' = 'win') => {
-    downloadDesktopAgentPackage(platform);
-    addNotificationInternal({
-      title: 'Desktop Agent Downloaded',
-      message: `ChronoTrack companion installer package downloaded for ${platform.toUpperCase()}. Run to enable silent background full-screen auditing.`,
-      type: 'sync'
-    });
-  }, [addNotificationInternal]);
-
-  // Invite remote employee
-  const inviteEmployee = useCallback(async (data: {
-    name: string;
-    email: string;
-    role: 'employee' | 'owner';
-    hourlyRate: number;
-    projectId: string;
-  }): Promise<User> => {
-    const newId = `user-${Date.now()}`;
-    const newUser: User = {
-      id: newId,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-      designation: data.role === 'owner' ? 'Project Manager' : 'Remote Team Member',
-      hourlyRate: data.hourlyRate,
-      isOnline: false,
-      activeProject: data.projectId,
-      trackingSince: null
-    };
-
-    setUsers(prev => {
-      const updated = [...prev, newUser];
-      saveUsers(updated);
-      return updated;
-    });
-
-    addNotificationInternal({
-      title: 'Team Member Invited',
-      message: `${data.name} (${data.email}) added to workspace at $${data.hourlyRate}/hr.`,
-      type: 'security',
-      priority: 'urgent'
-    });
-
-    return newUser;
-  }, [addNotificationInternal]);
-
   // Start Tracking
   const startTracking = useCallback(async () => {
     setIsTracking(true);
@@ -411,7 +401,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'sync',
       priority: 'normal'
     });
-  }, [currentUser.id, activeProjectId, trackingMemo, settings.blurScreenshotsByDefault, projects, addNotificationInternal]);
+  }, [currentUser.id, activeProjectId, trackingMemo, settings.blurScreenshotsByDefault, projects, realScreenStream, addNotificationInternal]);
 
   // Stop Tracking & Save Entry
   const stopTracking = useCallback(async () => {
@@ -524,6 +514,254 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [trackingMemo, realScreenStream, settings.blurScreenshotsByDefault, addNotificationInternal]);
 
+  // Download Desktop Agent Companion
+  const downloadDesktopAgent = useCallback((platform: 'win' | 'mac' | 'linux' = 'win') => {
+    downloadDesktopAgentPackage(platform, { email: currentUser.email, apiToken: currentUser.apiToken });
+    addNotificationInternal({
+      title: 'Desktop Agent Downloaded',
+      message: `ChronoTrack .exe setup downloaded with your API Token pre-linked.`,
+      type: 'sync'
+    });
+  }, [currentUser, addNotificationInternal]);
+
+  // Download Agent JSON configuration
+  const downloadAgentConfig = useCallback(() => {
+    downloadAgentConfigFile({ email: currentUser.email, apiToken: currentUser.apiToken });
+    addNotificationInternal({
+      title: 'Agent Config Saved',
+      message: `Downloaded chronotrack-agent-config.json with workspace credentials.`,
+      type: 'sync'
+    });
+  }, [currentUser, addNotificationInternal]);
+
+  // Update User Profile Details (name, avatar, email, rate, project, password)
+  const updateUserProfile = useCallback((userId: string, updates: Partial<User>) => {
+    setUsers(prev => {
+      const updated = prev.map(u => u.id === userId ? { ...u, ...updates } : u);
+      saveUsers(updated);
+      return updated;
+    });
+
+    if (currentUser.id === userId) {
+      setCurrentUser(prev => ({ ...prev, ...updates }));
+    }
+
+    addNotificationInternal({
+      title: 'Profile Saved',
+      message: `Updated profile details for ${updates.name || currentUser.name}.`,
+      type: 'sync'
+    });
+  }, [currentUser, addNotificationInternal]);
+
+  // Login with Credentials
+  const loginWithCredentials = useCallback(async (
+    emailOrUsername: string,
+    pass: string
+  ): Promise<User | null> => {
+    const verified = verifyUserCredentials(emailOrUsername, pass);
+    if (!verified) return null;
+
+    if (isTracking) {
+      await stopTracking();
+    }
+
+    setCurrentUser(verified);
+    setIsAuthenticated(true);
+    saveAuthSession({ userId: verified.id });
+    setActiveViewState(verified.role === 'owner' ? 'dashboard' : 'tracker');
+
+    addNotificationInternal({
+      title: 'Authenticated Successfully',
+      message: `Welcome back, ${verified.name} (${verified.role === 'owner' ? 'Owner / Manager' : 'Team Member'}).`,
+      type: 'security',
+      priority: 'urgent'
+    });
+
+    return verified;
+  }, [isTracking, stopTracking, addNotificationInternal]);
+
+  // Login via Google / Gmail
+  const loginWithGoogle = useCallback(async (email: string, name?: string): Promise<User> => {
+    if (isTracking) {
+      await stopTracking();
+    }
+
+    const currentUsers = loadUsers();
+    let matchedUser = currentUsers.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+
+    if (!matchedUser) {
+      // Create new employee contractor profile for this Google Account
+      matchedUser = {
+        id: `user-g-${Date.now()}`,
+        name: name?.trim() || email.split('@')[0],
+        email: email.trim().toLowerCase(),
+        role: 'employee',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        designation: 'Contractor Engineer',
+        hourlyRate: 65,
+        isOnline: true,
+        activeProject: projects[0]?.id || 'proj-1',
+        trackingSince: null,
+        password: 'google-oauth-linked',
+        apiToken: `ct_live_google_${Date.now()}`
+      };
+      const updated = [...currentUsers, matchedUser];
+      setUsers(updated);
+      saveUsers(updated);
+    }
+
+    setCurrentUser(matchedUser);
+    setIsAuthenticated(true);
+    saveAuthSession({ userId: matchedUser.id });
+    setActiveViewState(matchedUser.role === 'owner' ? 'dashboard' : 'tracker');
+
+    addNotificationInternal({
+      title: 'Google Single Sign-On Verified',
+      message: `Signed in via Gmail as ${matchedUser.name}.`,
+      type: 'security'
+    });
+
+    return matchedUser;
+  }, [isTracking, projects, stopTracking, addNotificationInternal]);
+
+  // Join Team with Invite Code
+  const joinTeamWithCode = useCallback(async (
+    code: string,
+    name: string,
+    email: string,
+    pass: string
+  ): Promise<User | null> => {
+    const invite = findInviteByCode(code);
+    if (!invite) return null;
+
+    if (isTracking) {
+      await stopTracking();
+    }
+
+    const newUser: User = {
+      id: `user-inv-${Date.now()}`,
+      name: name.trim() || 'New Contractor',
+      email: email.trim().toLowerCase(),
+      role: invite.role,
+      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+      designation: `${invite.companyName} Member`,
+      hourlyRate: invite.hourlyRate,
+      isOnline: true,
+      activeProject: invite.projectId,
+      trackingSince: null,
+      password: pass.trim() || 'password123',
+      apiToken: `ct_live_inv_${Date.now()}`
+    };
+
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      saveUsers(updated);
+      return updated;
+    });
+
+    setCurrentUser(newUser);
+    setIsAuthenticated(true);
+    saveAuthSession({ userId: newUser.id });
+    setActiveViewState('tracker');
+
+    addNotificationInternal({
+      title: `Joined ${invite.companyName}`,
+      message: `Successfully joined ${invite.projectName} team at $${invite.hourlyRate}/hr.`,
+      type: 'security',
+      priority: 'urgent'
+    });
+
+    return newUser;
+  }, [isTracking, stopTracking, addNotificationInternal]);
+
+  // Logout / Lock Session
+  const logout = useCallback(() => {
+    if (isTracking) {
+      stopTracking();
+    }
+    if (realScreenStream) {
+      realScreenStream.getTracks().forEach(t => t.stop());
+      setRealScreenStream(null);
+    }
+    saveAuthSession(null);
+    setIsAuthenticated(false);
+    addNotificationInternal({
+      title: 'Logged Out',
+      message: 'Workspace session locked. Please re-authenticate to continue tracking.',
+      type: 'security'
+    });
+  }, [isTracking, realScreenStream, stopTracking, addNotificationInternal]);
+
+  // Secure Switch User (only used if explicitly authenticated)
+  const switchUser = useCallback((userId: string) => {
+    const selected = users.find(u => u.id === userId);
+    if (selected) {
+      if (isTracking) {
+        stopTracking();
+      }
+      setCurrentUser(selected);
+      saveAuthSession({ userId: selected.id });
+      setActiveViewState(selected.role === 'owner' ? 'dashboard' : 'tracker');
+      addNotificationInternal({
+        title: `Switched Session to ${selected.role === 'owner' ? 'Owner' : 'Employee'}`,
+        message: `Active user: ${selected.name} (${selected.designation})`,
+        type: 'security'
+      });
+    }
+  }, [users, isTracking, stopTracking, addNotificationInternal]);
+
+  // Role-guarded setActiveView
+  const setActiveView = useCallback((view: AppView) => {
+    if (currentUser.role !== 'owner' && (view === 'dashboard' || view === 'payroll')) {
+      addNotificationInternal({
+        title: 'Access Restricted',
+        message: 'Owner Panel and Payroll are restricted to authenticated managers only.',
+        type: 'security',
+        priority: 'urgent'
+      });
+      return;
+    }
+    setActiveViewState(view);
+  }, [currentUser, addNotificationInternal]);
+
+  // Invite remote employee
+  const inviteEmployee = useCallback(async (data: {
+    name: string;
+    email: string;
+    role: 'employee' | 'owner';
+    hourlyRate: number;
+    projectId: string;
+  }): Promise<User> => {
+    const newId = `user-${Date.now()}`;
+    const newUser: User = {
+      id: newId,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      designation: data.role === 'owner' ? 'Project Manager' : 'Remote Team Member',
+      hourlyRate: data.hourlyRate,
+      isOnline: false,
+      activeProject: data.projectId,
+      trackingSince: null
+    };
+
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      saveUsers(updated);
+      return updated;
+    });
+
+    addNotificationInternal({
+      title: 'Team Member Invited',
+      message: `${data.name} (${data.email}) added to workspace at $${data.hourlyRate}/hr.`,
+      type: 'security',
+      priority: 'urgent'
+    });
+
+    return newUser;
+  }, [addNotificationInternal]);
+
   // Add Manual Time Entry
   const addManualTimeEntry = useCallback(async (params: {
     projectId: string;
@@ -635,36 +873,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [syncOfflineData, addNotificationInternal]);
 
-  // Switch User
-  const switchUser = useCallback((userId: string) => {
-    const selected = users.find(u => u.id === userId);
-    if (selected) {
-      if (isTracking) {
-        stopTracking();
-      }
-      setCurrentUser(selected);
-      setActiveView(selected.role === 'owner' ? 'dashboard' : 'tracker');
-      addNotificationInternal({
-        title: `Switched Role to ${selected.role === 'owner' ? 'Owner / Manager' : 'Employee Tracker'}`,
-        message: `Active profile: ${selected.name} (${selected.designation})`,
-        type: 'security'
-      });
-    }
-  }, [users, isTracking, stopTracking, addNotificationInternal]);
-
-  // Update Settings
   const updateSettings = useCallback((newSettings: Partial<TrackingSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
       saveSettings(updated);
       return updated;
     });
-    addNotificationInternal({
-      title: 'Preferences Updated',
-      message: `Updated tracking configuration (${newSettings.screenshotsPer10Min ? `${newSettings.screenshotsPer10Min} shots/10m` : 'settings applied'}).`,
-      type: 'system'
-    });
-  }, [addNotificationInternal]);
+  }, []);
 
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications(prev => {
@@ -691,6 +906,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         networkStatus,
         isDarkMode,
         offlineQueueCount,
+        isAuthenticated,
+        loginWithCredentials,
+        loginWithGoogle,
+        joinTeamWithCode,
+        logout,
+        updateUserProfile,
         isTracking,
         activeProjectId,
         trackingMemo,
@@ -713,6 +934,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         disableLiveScreenCapture,
         setScreenCaptureMode,
         downloadDesktopAgent,
+        downloadAgentConfig,
         inviteEmployee,
         addManualTimeEntry,
         updateSettings,
@@ -730,6 +952,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsInviteModalOpen,
         isDesktopModalOpen,
         setIsDesktopModalOpen,
+        isEditProfileModalOpen,
+        setIsEditProfileModalOpen,
+        profileModalTargetUser,
+        setProfileModalTargetUser,
         activeView,
         setActiveView
       }}

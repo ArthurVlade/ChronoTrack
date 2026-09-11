@@ -12,24 +12,39 @@ import {
   ExternalLink,
   Laptop,
   Apple,
-  FileCode
+  FileCode,
+  Key,
+  Copy,
+  Check,
+  FileJson
 } from 'lucide-react';
 
 export const DesktopAgentModal: React.FC = () => {
   const {
+    currentUser,
     isDesktopModalOpen,
     setIsDesktopModalOpen,
-    downloadDesktopAgent
+    downloadDesktopAgent,
+    downloadAgentConfig
   } = useApp();
 
   const [selectedOS, setSelectedOS] = useState<'win' | 'mac' | 'linux'>('win');
   const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   if (!isDesktopModalOpen) return null;
 
   const handleDownload = () => {
     downloadDesktopAgent(selectedOS);
     setHasDownloaded(true);
+  };
+
+  const handleCopyToken = () => {
+    if (currentUser.apiToken) {
+      navigator.clipboard.writeText(currentUser.apiToken);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
+    }
   };
 
   return (
@@ -166,9 +181,65 @@ export const DesktopAgentModal: React.FC = () => {
         {hasDownloaded && (
           <div className="p-3 rounded-xl bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/20 text-xs mb-5 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Installer downloaded. Follow the setup steps below to start tracking.</span>
+            <span>Installer downloaded with your API credentials embedded. Follow the setup steps below to start tracking.</span>
           </div>
         )}
+
+        {/* Account API Connection Card (Solves: Downloadable connecting to account) */}
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0071E3]/5 to-[#AF52DE]/5 border border-[#0071E3]/20 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-[#0071E3]" />
+              <h4 className="text-xs font-bold text-[#1D1D1F] dark:text-white uppercase tracking-wider">
+                Your Account API Connection Key
+              </h4>
+            </div>
+            <span className="text-[10px] font-semibold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-full">
+              Pre-linked to {currentUser.name}
+            </span>
+          </div>
+          <p className="text-xs text-[#86868B] dark:text-[#8E8E93] mb-3 leading-relaxed">
+            The downloadable .exe connects to your account (<strong className="text-[#1D1D1F] dark:text-white">{currentUser.email}</strong>). You can also manually provide this secret token in the desktop client or export the JSON configuration file below:
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                readOnly
+                value={currentUser.apiToken || `ct_live_${currentUser.id}_token`}
+                className="w-full h-10 px-3 pr-24 rounded-xl bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] text-xs font-mono text-[#1D1D1F] dark:text-white focus:outline-none select-all"
+              />
+              <button
+                type="button"
+                onClick={handleCopyToken}
+                className="absolute right-1 top-1 h-8 px-2.5 rounded-lg bg-[#0071E3] text-white text-[11px] font-semibold flex items-center gap-1 hover:bg-[#0077ED] transition-colors cursor-pointer"
+              >
+                {copiedToken ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Key</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={downloadAgentConfig}
+              className="h-10 px-3.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-xs font-semibold text-[#1D1D1F] dark:text-white flex items-center justify-center gap-1.5 transition-colors border border-black/[0.06] dark:border-white/[0.08] whitespace-nowrap cursor-pointer"
+              title="Download chronotrack-agent-config.json"
+            >
+              <FileJson className="w-3.5 h-3.5 text-[#FF9500]" />
+              <span>Export config.json</span>
+            </button>
+          </div>
+        </div>
 
         {/* 3-Step Setup Instructions */}
         <div className="flex flex-col gap-3">

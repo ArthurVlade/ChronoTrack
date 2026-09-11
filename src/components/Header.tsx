@@ -20,14 +20,16 @@ import {
   Lock,
   BookOpen,
   UserPlus,
-  Monitor
+  Monitor,
+  LogOut,
+  UserCog,
+  Key,
+  ShieldAlert
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
     currentUser,
-    users,
-    switchUser,
     activeView,
     setActiveView,
     networkStatus,
@@ -41,13 +43,18 @@ export const Header: React.FC = () => {
     setIsExportModalOpen,
     setIsAuthModalOpen,
     setIsInviteModalOpen,
-    setIsDesktopModalOpen
+    setIsDesktopModalOpen,
+    setIsEditProfileModalOpen,
+    setProfileModalTargetUser,
+    logout,
+    projects
   } = useApp();
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const currentProject = projects.find(p => p.id === currentUser.activeProject);
 
   return (
     <header className="sticky top-0 z-40 w-full apple-glass transition-colors duration-200 border-b border-black/[0.06] dark:border-white/[0.08]">
@@ -358,55 +365,104 @@ export const Header: React.FC = () => {
               <ChevronDown className="w-3.5 h-3.5 text-[#86868B] dark:text-[#8E8E93]" />
             </button>
 
-            {/* Switch User Dropdown */}
+            {/* Authenticated User Account Popover */}
             {showUserDropdown && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl apple-card shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-2 py-1.5 border-b border-black/[0.06] dark:border-white/[0.08] mb-2">
-                  <div className="text-[10px] font-semibold text-[#86868B] dark:text-[#8E8E93] uppercase tracking-wider">
-                    Switch Workspace Role
+              <div className="absolute right-0 mt-2 w-72 rounded-2xl apple-card shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 border border-black/[0.08] dark:border-white/[0.1]">
+                
+                {/* User Summary Header */}
+                <div className="flex items-center gap-3 pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-[#0071E3]/20 shadow-xs"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-[#1D1D1F] dark:text-white block truncate">
+                      {currentUser.name}
+                    </span>
+                    <span className="text-[11px] text-[#86868B] dark:text-[#8E8E93] block truncate">
+                      {currentUser.email}
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                        currentUser.role === 'owner'
+                          ? 'bg-[#AF52DE]/10 text-[#AF52DE]'
+                          : 'bg-[#0071E3]/10 text-[#0071E3]'
+                      }`}>
+                        {currentUser.role === 'owner' ? '👑 Owner & Manager' : '💻 Team Member'}
+                      </span>
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#86868B]">
+                        ${currentUser.hourlyRate}/hr
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-[#1D1D1F] dark:text-white font-medium mt-0.5">
-                    Select team member profile
-                  </p>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  {users.map(u => (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        switchUser(u.id);
-                        setShowUserDropdown(false);
-                      }}
-                      className={`flex items-center gap-3 w-full p-2 rounded-xl text-left transition-all ${
-                        u.id === currentUser.id
-                          ? 'bg-[#0071E3]/10 text-[#0071E3]'
-                          : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[#1D1D1F] dark:text-[#F5F5F7]'
-                      }`}
-                    >
-                      <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full object-cover" />
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-xs font-semibold truncate">{u.name}</span>
-                        <span className="text-[10px] text-[#86868B] dark:text-[#8E8E93] truncate">
-                          {u.role === 'owner' ? 'Owner / Manager' : 'Employee (Tracker only)'}
-                        </span>
-                      </div>
-                      {u.id === currentUser.id && <UserCheck className="w-4 h-4 text-[#0071E3]" />}
-                    </button>
-                  ))}
-                </div>
+                {/* Project Assignment info */}
+                {currentProject && (
+                  <div className="my-2.5 px-2.5 py-1.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] text-[10px] text-[#86868B] flex items-center justify-between">
+                    <span className="truncate">Project: <strong className="text-[#1D1D1F] dark:text-white font-medium">{currentProject.name}</strong></span>
+                  </div>
+                )}
 
-                <div className="mt-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+                {/* Menu Action Items */}
+                <div className="flex flex-col gap-1 mt-1">
+                  <button
+                    id="menu-edit-profile-btn"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      setProfileModalTargetUser(currentUser);
+                      setIsEditProfileModalOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <UserCog className="w-4 h-4 text-[#0071E3]" />
+                    <span>Edit Profile & Details</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      setIsDesktopModalOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <Key className="w-4 h-4 text-[#34C759]" />
+                    <span>Desktop .exe API Token</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setShowUserDropdown(false);
                       setIsAuthModalOpen(true);
                     }}
-                    className="w-full text-center py-1.5 rounded-lg text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 transition-all"
+                    className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
-                    OAuth / Account Settings
+                    <ShieldCheck className="w-4 h-4 text-[#FF9500]" />
+                    <span>Security & Encryption Settings</span>
                   </button>
                 </div>
+
+                {/* Secure Sign Out / Switch Account */}
+                <div className="mt-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08] space-y-1">
+                  <div className="px-2 py-1 text-[10px] text-[#86868B] dark:text-[#8E8E93]">
+                    🔒 Account hopping is disabled to preserve tracking integrity.
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      logout();
+                    }}
+                    className="flex items-center justify-between w-full px-2.5 py-2 rounded-xl text-xs font-semibold text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <LogOut className="w-3.5 h-3.5" />
+                      Switch Account / Log Out
+                    </span>
+                    <span className="text-[10px] text-[#FF3B30]/70">Password required</span>
+                  </button>
+                </div>
+
               </div>
             )}
           </div>

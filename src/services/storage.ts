@@ -1,4 +1,4 @@
-import { User, Project, TimeEntry, TrackingSettings, NotificationItem, WorkDiaryBlock, PayrollSummary } from '../types';
+import { User, Project, TimeEntry, TrackingSettings, NotificationItem, WorkDiaryBlock, PayrollSummary, TeamInvite } from '../types';
 import { encryptData, decryptData } from './crypto';
 
 const STORAGE_PREFIX = 'chronotrack_v1_';
@@ -8,6 +8,8 @@ const ENTRIES_KEY = `${STORAGE_PREFIX}entries`;
 const SETTINGS_KEY = `${STORAGE_PREFIX}settings`;
 const NOTIFS_KEY = `${STORAGE_PREFIX}notifications`;
 const OFFLINE_QUEUE_KEY = `${STORAGE_PREFIX}offline_queue`;
+const AUTH_SESSION_KEY = `${STORAGE_PREFIX}auth_session`;
+const INVITES_KEY = `${STORAGE_PREFIX}invites`;
 
 export const INITIAL_USERS: User[] = [
   {
@@ -20,7 +22,9 @@ export const INITIAL_USERS: User[] = [
     hourlyRate: 85,
     isOnline: true,
     activeProject: 'proj-1',
-    trackingSince: null
+    trackingSince: null,
+    password: 'admin123',
+    apiToken: 'ct_live_sarah_owner_e819b2'
   },
   {
     id: 'user-emp-1',
@@ -32,7 +36,9 @@ export const INITIAL_USERS: User[] = [
     hourlyRate: 60,
     isOnline: true,
     activeProject: 'proj-1',
-    trackingSince: new Date(Date.now() - 42 * 60 * 1000).toISOString()
+    trackingSince: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+    password: 'alex123',
+    apiToken: 'ct_live_alex_emp_93a7c1'
   },
   {
     id: 'user-emp-2',
@@ -44,7 +50,9 @@ export const INITIAL_USERS: User[] = [
     hourlyRate: 65,
     isOnline: true,
     activeProject: 'proj-2',
-    trackingSince: new Date(Date.now() - 85 * 60 * 1000).toISOString()
+    trackingSince: new Date(Date.now() - 85 * 60 * 1000).toISOString(),
+    password: 'maya123',
+    apiToken: 'ct_live_maya_emp_41c88d'
   },
   {
     id: 'user-emp-3',
@@ -56,7 +64,34 @@ export const INITIAL_USERS: User[] = [
     hourlyRate: 75,
     isOnline: false,
     activeProject: 'proj-3',
-    trackingSince: null
+    trackingSince: null,
+    password: 'liam123',
+    apiToken: 'ct_live_liam_emp_62d5ef'
+  }
+];
+
+export const INITIAL_INVITES: TeamInvite[] = [
+  {
+    code: 'APOLLO-2026',
+    companyName: 'Apollo Technology Labs',
+    projectName: 'Apollo Web & Desktop App',
+    projectId: 'proj-1',
+    role: 'employee',
+    hourlyRate: 65,
+    createdByName: 'Sarah Jenkins (Owner)',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    expiresAt: '2026-12-31T23:59:59.000Z'
+  },
+  {
+    code: 'HIG-DESIGN-99',
+    companyName: 'Vanguard Interactive',
+    projectName: 'Apple HIG Design System',
+    projectId: 'proj-2',
+    role: 'employee',
+    hourlyRate: 70,
+    createdByName: 'Sarah Jenkins (Owner)',
+    createdAt: '2026-09-05T00:00:00.000Z',
+    expiresAt: '2026-12-31T23:59:59.000Z'
   }
 ];
 
@@ -262,7 +297,21 @@ function generateSeedTimeEntries(): TimeEntry[] {
 export function loadUsers(): User[] {
   try {
     const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) : INITIAL_USERS;
+    if (!raw) {
+      saveUsers(INITIAL_USERS);
+      return INITIAL_USERS;
+    }
+    const parsed: User[] = JSON.parse(raw);
+    // Ensure default passwords and apiTokens are present if upgraded
+    const merged = parsed.map(user => {
+      const initial = INITIAL_USERS.find(u => u.id === user.id);
+      return {
+        ...user,
+        password: user.password || initial?.password || 'password123',
+        apiToken: user.apiToken || initial?.apiToken || `ct_live_${user.id}_${Math.random().toString(36).substring(2, 8)}`
+      };
+    });
+    return merged;
   } catch {
     return INITIAL_USERS;
   }
@@ -270,6 +319,70 @@ export function loadUsers(): User[] {
 
 export function saveUsers(users: User[]) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+export function loadAuthSession(): { userId: string } | null {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAuthSession(session: { userId: string } | null) {
+  if (session) {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  } else {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  }
+}
+
+export function loadInvites(): TeamInvite[] {
+  try {
+    const raw = localStorage.getItem(INVITES_KEY);
+    if (!raw) {
+      localStorage.setItem(INVITES_KEY, JSON.stringify(INITIAL_INVITES));
+      return INITIAL_INVITES;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_INVITES;
+  }
+}
+
+export function saveInvite(invite: TeamInvite) {
+  const current = loadInvites();
+  const filtered = current.filter(i => i.code.toUpperCase() !== invite.code.toUpperCase());
+  const updated = [invite, ...filtered];
+  localStorage.setItem(INVITES_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+export function findInviteByCode(code: string): TeamInvite | undefined {
+  const invites = loadInvites();
+  return invites.find(i => i.code.trim().toUpperCase() === code.trim().toUpperCase());
+}
+
+export function verifyUserCredentials(usernameOrEmail: string, pass: string): User | null {
+  const users = loadUsers();
+  const cleanInput = usernameOrEmail.trim().toLowerCase();
+  
+  const user = users.find(u => 
+    u.email.toLowerCase() === cleanInput || 
+    u.name.toLowerCase() === cleanInput ||
+    (cleanInput.includes('owner') && u.role === 'owner') ||
+    (cleanInput.includes('alex') && u.id === 'user-emp-1')
+  );
+
+  if (!user) return null;
+  
+  // Verify password
+  if (user.password && user.password !== pass) {
+    return null;
+  }
+
+  return user;
 }
 
 export function loadProjects(): Project[] {

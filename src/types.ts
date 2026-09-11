@@ -11,6 +11,20 @@ export interface User {
   isOnline: boolean;
   activeProject?: string;
   trackingSince?: string | null; // ISO timestamp if currently tracking
+  password?: string; // Stored password for authentication
+  apiToken?: string; // API token for desktop .exe tracker connection
+}
+
+export interface TeamInvite {
+  code: string; // e.g. "APOLLO-2026"
+  companyName: string;
+  projectName: string;
+  projectId: string;
+  role: UserRole;
+  hourlyRate: number;
+  createdByName: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface Project {
