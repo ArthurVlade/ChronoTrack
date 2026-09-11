@@ -10,31 +10,43 @@
 
 /* Apple Liquid/Glass and subtle blur styles */
 .apple-glass {
-  background-color: rgba(255, 255, 255, 0.72);
+  background-color: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid #E2E8F0;
 }
 
 .dark .apple-glass {
-  background-color: rgba(28, 28, 30, 0.75);
+  background-color: rgba(15, 21, 35, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid #2A3649;
 }
 
 .apple-card {
   background-color: #FFFFFF;
   border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 4px 14px rgba(15, 23, 42, 0.03);
 }
 
 .dark .apple-card {
-  background-color: #1C1C1E;
+  background-color: #182030;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid #2A3649;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
+}
+
+.apple-subcard {
+  background-color: #F8FAFC;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+}
+
+.dark .apple-subcard {
+  background-color: #121824;
+  border-radius: 12px;
+  border: 1px solid #2A3649;
 }
 
 /* Custom minimal scrollbar */

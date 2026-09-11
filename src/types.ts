@@ -36,6 +36,8 @@ export interface Project {
   totalTrackedSeconds: number;
   budgetHours?: number;
   deadline?: string;
+  description?: string;
+  status?: 'active' | 'completed' | 'archived';
 }
 
 export interface Screenshot {
@@ -128,7 +130,7 @@ export type NetworkStatus = 'online' | 'offline' | 'syncing';
 
 export type ScreenCaptureMode = 'live_screen' | 'simulated';
 
-export type AppView = 'tracker' | 'dashboard' | 'reports' | 'payroll' | 'settings' | 'docs';
+export type AppView = 'tracker' | 'dashboard' | 'reports' | 'payroll' | 'projects' | 'settings' | 'docs';
 
 export interface EmployeeInvite {
   email: string;

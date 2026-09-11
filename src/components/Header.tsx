@@ -24,7 +24,8 @@ import {
   LogOut,
   UserCog,
   Key,
-  ShieldAlert
+  ShieldAlert,
+  FolderKanban
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -122,22 +123,34 @@ export const Header: React.FC = () => {
                 <button
                   id="nav-reports-manager"
                   onClick={() => setActiveView('reports')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     activeView === 'reports'
-                      ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                      : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+                      ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Screenshots & Audit
                 </button>
                 <button
+                  id="nav-projects-manager"
+                  onClick={() => setActiveView('projects')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    activeView === 'projects'
+                      ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <FolderKanban className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  Projects
+                </button>
+                <button
                   id="nav-payroll"
                   onClick={() => setActiveView('payroll')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     activeView === 'payroll'
-                      ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
-                      : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+                      ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <DollarSign className="w-3.5 h-3.5" />

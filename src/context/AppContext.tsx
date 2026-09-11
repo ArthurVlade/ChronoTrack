@@ -103,6 +103,11 @@ interface AppContextType {
   clearAllNotifications: () => void;
   addNotification: (item: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
   
+  // Project Management (Owner)
+  addProject: (project: Omit<Project, 'id' | 'totalTrackedSeconds'>) => Project;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  deleteProject: (id: string) => { success: boolean; message: string };
+  
   // Modal states
   isManualModalOpen: boolean;
   setIsManualModalOpen: (open: boolean) => void;
@@ -130,7 +135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Check auth session
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const session = loadAuthSession();
-    if (!session) return true; // Default session so app loads seamlessly
+    if (!session) return false; // Default to false so home landing page displays for visitors
     const currentList = loadUsers();
     return currentList.some(u => u.id === session.userId);
   });
@@ -568,7 +573,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(verified);
     setIsAuthenticated(true);
     saveAuthSession({ userId: verified.id });
-    setActiveViewState(verified.role === 'owner' ? 'dashboard' : 'tracker');
+    setActiveViewState('tracker'); // Directs to tracker screen for verified timekeeping and security
 
     addNotificationInternal({
       title: 'Authenticated Successfully',
@@ -613,7 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(matchedUser);
     setIsAuthenticated(true);
     saveAuthSession({ userId: matchedUser.id });
-    setActiveViewState(matchedUser.role === 'owner' ? 'dashboard' : 'tracker');
+    setActiveViewState('tracker'); // Directs to tracker screen for verified timekeeping and security
 
     addNotificationInternal({
       title: 'Google Single Sign-On Verified',
@@ -894,6 +899,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveNotifications([]);
   }, []);
 
+  // Project Management (Owner)
+  const addProject = useCallback((data: Omit<Project, 'id' | 'totalTrackedSeconds'>): Project => {
+    const newProject: Project = {
+      ...data,
+      id: `proj-${Date.now()}`,
+      totalTrackedSeconds: 0,
+      hourlyRate: Number(data.hourlyRate) || 65,
+      budgetHours: data.budgetHours ? Number(data.budgetHours) : undefined,
+      status: data.status || 'active'
+    };
+    setProjects(prev => {
+      const updated = [newProject, ...prev];
+      saveProjects(updated);
+      return updated;
+    });
+    addNotificationInternal({
+      title: 'Project Created',
+      message: `Project "${newProject.name}" for client "${newProject.clientName}" created successfully.`,
+      type: 'sync'
+    });
+    return newProject;
+  }, [addNotificationInternal]);
+
+  const updateProject = useCallback((id: string, updates: Partial<Project>) => {
+    setProjects(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, ...updates } : p);
+      saveProjects(updated);
+      return updated;
+    });
+    addNotificationInternal({
+      title: 'Project Updated',
+      message: `Changes saved for project.`,
+      type: 'sync'
+    });
+  }, [addNotificationInternal]);
+
+  const deleteProject = useCallback((id: string): { success: boolean; message: string } => {
+    const currentList = loadProjects();
+    if (currentList.length <= 1) {
+      return { success: false, message: 'Cannot delete the only project in the workspace. Maintain at least one active project.' };
+    }
+    const target = currentList.find(p => p.id === id);
+    if (!target) {
+      return { success: false, message: 'Project not found.' };
+    }
+
+    const remaining = currentList.filter(p => p.id !== id);
+    const fallbackId = remaining[0].id;
+
+    // Safely reassign any users who had this project as active
+    setUsers(prev => {
+      const updated = prev.map(u => u.activeProject === id ? { ...u, activeProject: fallbackId } : u);
+      saveUsers(updated);
+      return updated;
+    });
+
+    if (currentUser.activeProject === id) {
+      setCurrentUser(prev => ({ ...prev, activeProject: fallbackId }));
+    }
+    if (activeProjectId === id) {
+      setActiveProjectId(fallbackId);
+    }
+
+    setProjects(remaining);
+    saveProjects(remaining);
+
+    addNotificationInternal({
+      title: 'Project Deleted',
+      message: `Project "${target.name}" removed. Active assignments transferred to "${remaining[0].name}".`,
+      type: 'sync',
+      priority: 'urgent'
+    });
+    return { success: true, message: `Project "${target.name}" deleted successfully.` };
+  }, [currentUser.activeProject, activeProjectId, addNotificationInternal]);
+
   return (
     <AppContext.Provider
       value={{
@@ -942,6 +1022,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markNotificationAsRead,
         clearAllNotifications,
         addNotification,
+        addProject,
+        updateProject,
+        deleteProject,
         isManualModalOpen,
         setIsManualModalOpen,
         isExportModalOpen,

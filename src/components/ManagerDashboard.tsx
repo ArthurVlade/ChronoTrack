@@ -24,7 +24,8 @@ import {
   X,
   UserPlus,
   BookOpen,
-  UserCog
+  UserCog,
+  FolderKanban
 } from 'lucide-react';
 import { Screenshot, WorkDiaryBlock, User } from '../types';
 import { buildWorkDiaryBlocks, calculatePayrollSummaries } from '../services/storage';
@@ -155,8 +156,15 @@ export const ManagerDashboard: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setActiveView('projects')}
+              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <FolderKanban className="w-3.5 h-3.5" />
+              <span>Manage Projects</span>
+            </button>
+            <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-3 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Invite Member</span>

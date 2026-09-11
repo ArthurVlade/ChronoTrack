@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Key,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   Ticket,
   CheckCircle2,
@@ -17,7 +18,12 @@ import {
 } from 'lucide-react';
 import { findInviteByCode } from '../services/storage';
 
-export const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  onBackToHome?: () => void;
+  initialAccount?: { email: string; pass: string } | null;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onBackToHome, initialAccount }) => {
   const {
     loginWithCredentials,
     loginWithGoogle,
@@ -29,8 +35,17 @@ export const LoginScreen: React.FC = () => {
   const [authTab, setAuthTab] = useState<'login' | 'google' | 'invite'>('login');
   
   // Standard Login State
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState(initialAccount?.email || '');
+  const [loginPassword, setLoginPassword] = useState(initialAccount?.pass || '');
+  
+  // Update if initialAccount changes
+  useEffect(() => {
+    if (initialAccount) {
+      setLoginEmail(initialAccount.email);
+      setLoginPassword(initialAccount.pass);
+      setAuthTab('login');
+    }
+  }, [initialAccount]);
   
   // Gmail State
   const [googleEmail, setGoogleEmail] = useState('harismian21@gmail.com');
@@ -124,47 +139,59 @@ export const LoginScreen: React.FC = () => {
   const currentInvitePreview = findInviteByCode(inviteCode);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col justify-between selection:bg-[#0071E3] selection:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0D121D] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white transition-colors duration-200">
       
       {/* Top Bar */}
-      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#0071E3] text-white flex items-center justify-center shadow-sm">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold tracking-tight text-[#1D1D1F] dark:text-white">
-                ChronoTrack
-              </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#0071E3]/10 text-[#0071E3]">
-                Enterprise
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="mr-1 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-300 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Home</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0071E3] to-[#409CFF] text-white flex items-center justify-center shadow-xs">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                  ChronoTrack
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  Enterprise
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                Secure Authentication Gateway
               </span>
             </div>
-            <span className="text-[10px] text-[#86868B] dark:text-[#8E8E93]">
-              Upwork-Grade Remote Time & Audit Platform
-            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:flex items-center gap-1 text-[11px] text-[#86868B] dark:text-[#8E8E93] px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#34C759]" />
+          <span className="hidden sm:flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800/80 border border-slate-300/60 dark:border-slate-700">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
             AES-256 Authenticated
           </span>
           <button
             onClick={toggleDarkMode}
-            className="p-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[#86868B] dark:text-[#8E8E93] transition-colors"
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-[#FF9500]" /> : <Moon className="w-4 h-4 text-[#0071E3]" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-600" />}
           </button>
         </div>
       </header>
 
       {/* Main Center Auth Card */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="max-w-md w-full apple-card p-6 sm:p-8 shadow-2xl rounded-3xl border border-black/[0.06] dark:border-white/[0.08] animate-in fade-in zoom-in-95 duration-200">
+        <div className="max-w-md w-full apple-card p-6 sm:p-8 shadow-xl rounded-3xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#182030] animate-in fade-in zoom-in-95 duration-200">
           
           {/* Brand & Greeting */}
           <div className="text-center mb-6">
@@ -180,33 +207,33 @@ export const LoginScreen: React.FC = () => {
           </div>
 
           {/* Tab Selector (Apple Segmented Style) */}
-          <div className="grid grid-cols-3 p-1 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] mb-6 text-xs font-medium">
+          <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-100 dark:bg-[#111722] border border-slate-200 dark:border-slate-700/80 mb-6 text-xs font-medium">
             <button
               onClick={() => { setAuthTab('login'); setErrorMessage(null); }}
-              className={`py-2 rounded-xl transition-all ${
+              className={`py-2 rounded-xl transition-all cursor-pointer ${
                 authTab === 'login'
-                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+                  ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setAuthTab('google'); setErrorMessage(null); }}
-              className={`py-2 rounded-xl transition-all ${
+              className={`py-2 rounded-xl transition-all cursor-pointer ${
                 authTab === 'google'
-                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+                  ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Gmail
             </button>
             <button
               onClick={() => { setAuthTab('invite'); setErrorMessage(null); }}
-              className={`py-2 rounded-xl transition-all ${
+              className={`py-2 rounded-xl transition-all cursor-pointer ${
                 authTab === 'invite'
-                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#86868B] dark:text-[#8E8E93] hover:text-[#1D1D1F] dark:hover:text-white'
+                  ? 'bg-white dark:bg-[#1E2838] text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-600'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Invite Code
@@ -215,7 +242,7 @@ export const LoginScreen: React.FC = () => {
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-[#FF3B30]/10 border border-[#FF3B30]/20 flex items-start gap-2 text-xs text-[#FF3B30] animate-in fade-in">
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400 animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -225,38 +252,38 @@ export const LoginScreen: React.FC = () => {
           {authTab === 'login' && (
             <form onSubmit={handleStandardLogin} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold text-[#86868B] dark:text-[#8E8E93] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Email or Username
                 </label>
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] focus-within:border-[#0071E3] transition-colors">
-                  <Mail className="w-4 h-4 text-[#86868B]" />
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#111722] border border-slate-300 dark:border-slate-700 focus-within:border-blue-600 dark:focus-within:border-blue-500 transition-colors">
+                  <Mail className="w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     required
                     value={loginEmail}
                     onChange={e => setLoginEmail(e.target.value)}
                     placeholder="sarah.jenkins@company.com or alex.rivera@company.com"
-                    className="w-full bg-transparent text-xs text-[#1D1D1F] dark:text-white focus:outline-hidden"
+                    className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-semibold text-[#86868B] dark:text-[#8E8E93] uppercase tracking-wider">
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                     Password
                   </label>
-                  <span className="text-[10px] text-[#86868B]">Owners require password</span>
+                  <span className="text-[10px] text-slate-400">Owners require password</span>
                 </div>
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] focus-within:border-[#0071E3] transition-colors">
-                  <Key className="w-4 h-4 text-[#86868B]" />
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#111722] border border-slate-300 dark:border-slate-700 focus-within:border-blue-600 dark:focus-within:border-blue-500 transition-colors">
+                  <Key className="w-4 h-4 text-slate-400" />
                   <input
                     type="password"
                     required
                     value={loginPassword}
                     onChange={e => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-transparent text-xs text-[#1D1D1F] dark:text-white focus:outline-hidden font-mono"
+                    className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden font-mono"
                   />
                 </div>
               </div>
@@ -271,34 +298,34 @@ export const LoginScreen: React.FC = () => {
               </button>
 
               {/* Demo Credentials Helper Chips */}
-              <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08]">
-                <span className="text-[10px] font-semibold text-[#86868B] uppercase tracking-wider block mb-2">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700/80">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
                   Quick Demo Accounts (Click to Fill):
                 </span>
                 <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => quickFillCredentials('sarah.jenkins@company.com', 'admin123')}
-                    className="w-full py-1.5 px-2.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full py-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-[#1A2333] border border-slate-200 dark:border-slate-700/70 text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span className="font-semibold text-[#0071E3]">👑 Sarah Jenkins (Owner / Manager)</span>
-                    <span className="text-[#86868B] font-mono">admin123</span>
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">👑 Sarah Jenkins (Owner / Manager)</span>
+                    <span className="text-slate-500 font-mono">admin123</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => quickFillCredentials('alex.rivera@company.com', 'alex123')}
-                    className="w-full py-1.5 px-2.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full py-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-[#1A2333] border border-slate-200 dark:border-slate-700/70 text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span className="font-semibold text-[#1D1D1F] dark:text-white">💻 Alex Rivera (Employee Tracker)</span>
-                    <span className="text-[#86868B] font-mono">alex123</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">💻 Alex Rivera (Employee Tracker)</span>
+                    <span className="text-slate-500 font-mono">alex123</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => quickFillCredentials('maya.patel@company.com', 'maya123')}
-                    className="w-full py-1.5 px-2.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full py-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-[#1A2333] border border-slate-200 dark:border-slate-700/70 text-left text-[11px] flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span className="font-semibold text-[#1D1D1F] dark:text-white">🎨 Maya Patel (UI Designer)</span>
-                    <span className="text-[#86868B] font-mono">maya123</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">🎨 Maya Patel (UI Designer)</span>
+                    <span className="text-slate-500 font-mono">maya123</span>
                   </button>
                 </div>
               </div>
